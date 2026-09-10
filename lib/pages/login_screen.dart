@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../theme/app_theme.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -8,186 +9,166 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
-
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
+              const SizedBox(height: 36),
 
-              const SizedBox(height: 35),
-
-              // =========================
-              // LOGO
-              // =========================
-
+              // Logo & App Name
               SvgPicture.asset(
                 'assets/logo.svg',
-
-                width: 45,
-                height: 45,
-
+                width: 48,
+                height: 48,
                 placeholderBuilder: (context) {
                   return const Icon(
-                    Icons.park,
-                    size: 45,
-                    color: Color(0xFF0D8547),
+                    Icons.apartment_rounded,
+                    size: 48,
+                    color: AppTheme.primaryColor,
                   );
                 },
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
-              // =========================
-              // TITLE
-              // =========================
-
+              // Title
               const Text(
-                'Get Started',
-
+                'Get Started with Luxeylin',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: -0.5,
                 ),
               ),
 
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
               const Text(
-                "Welcome! Let's dive into your account.",
-
+                "Find, tour, and lease luxury homes with confidence.",
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 9,
-                  color: Colors.grey,
+                  fontSize: 13.5,
+                  color: AppTheme.textSecondary,
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 36),
 
               // =========================
-              // GOOGLE
+              // SOCIAL BUTTONS
               // =========================
-
               _socialButton(
                 icon: Icons.g_mobiledata,
-                text: 'Sign in with Google',
+                iconColor: Colors.red,
+                text: 'Continue with Google',
                 onPressed: () {
-                  _showMessage(
-                    context,
-                    'Google Sign In clicked',
-                  );
-                },
-              ),
-
-              const SizedBox(height: 8),
-
-              // =========================
-              // APPLE
-              // =========================
-
-              _socialButton(
-                icon: Icons.apple,
-                text: 'Sign in with Apple',
-                onPressed: () {
-                  _showMessage(
-                    context,
-                    'Apple Sign In clicked',
-                  );
-                },
-              ),
-
-              const SizedBox(height: 8),
-
-              // =========================
-              // FACEBOOK
-              // =========================
-
-              _socialButton(
-                icon: Icons.facebook,
-                text: 'Sign in with Facebook',
-                onPressed: () {
-                  _showMessage(
-                    context,
-                    'Facebook Sign In clicked',
-                  );
+                  Navigator.pushReplacementNamed(context, '/home');
                 },
               ),
 
               const SizedBox(height: 12),
 
-              // =========================
-              // OR
-              // =========================
+              _socialButton(
+                icon: Icons.apple,
+                iconColor: Colors.black,
+                text: 'Continue with Apple',
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/home');
+                },
+              ),
 
+              const SizedBox(height: 12),
+
+              _socialButton(
+                icon: Icons.facebook,
+                iconColor: const Color(0xFF1877F2),
+                text: 'Continue with Facebook',
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/home');
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // =========================
+              // OR DIVIDER
+              // =========================
               Row(
                 children: [
-
                   Expanded(
-                    child: Divider(
-                      color: Colors.grey.shade300,
-                    ),
+                    child: Divider(color: Colors.grey.shade300),
                   ),
-
                   const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10,
-                    ),
-
+                    padding: EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
-                      'Or continue with',
+                      'Or continue with email',
                       style: TextStyle(
-                        fontSize: 8,
-                        color: Colors.grey,
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                   ),
-
                   Expanded(
-                    child: Divider(
-                      color: Colors.grey.shade300,
-                    ),
+                    child: Divider(color: Colors.grey.shade300),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
               // =========================
               // EMAIL BUTTON
               // =========================
-
               SizedBox(
                 width: double.infinity,
-                height: 42,
-
-                child: ElevatedButton(
+                height: 50,
+                child: ElevatedButton.icon(
                   onPressed: () {
-                    _showMessage(
-                      context,
-                      'Email Sign In clicked',
-                    );
+                    Navigator.pushNamed(context, '/email-login');
                   },
-
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D8547),
-
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-
-                    elevation: 0,
-                  ),
-
-                  child: const Text(
+                  icon: const Icon(Icons.mail_outline_rounded, size: 20),
+                  label: const Text(
                     'Sign in with Email',
-
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // GUEST EXPLORE BUTTON
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, '/home');
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: const BorderSide(color: AppTheme.borderLight),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Explore as Guest',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -198,40 +179,33 @@ class LoginScreen extends StatelessWidget {
               // =========================
               // SIGN UP
               // =========================
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-
                   const Text(
                     "Don't have an account? ",
                     style: TextStyle(
-                      fontSize: 8,
-                      color: Colors.grey,
+                      fontSize: 13.5,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
-
                   GestureDetector(
                     onTap: () {
-                      _showMessage(
-                        context,
-                        'Sign Up clicked',
-                      );
+                      Navigator.pushNamed(context, '/signup');
                     },
-
                     child: const Text(
                       'Sign Up',
                       style: TextStyle(
-                        fontSize: 8,
-                        color: Color(0xFF0D8547),
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -239,70 +213,42 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // =========================
-  // SOCIAL BUTTON
-  // =========================
-
   Widget _socialButton({
     required IconData icon,
+    required Color iconColor,
     required String text,
     required VoidCallback onPressed,
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 40,
-
+      height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
-
         style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: Colors.grey.shade300,
-          ),
-
+          side: const BorderSide(color: AppTheme.borderLight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             Icon(
               icon,
-              size: 17,
-              color: Colors.black,
+              size: 22,
+              color: iconColor,
             ),
-
-            Expanded(
-              child: Center(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.black,
-                  ),
-                ),
+            const SizedBox(width: 12),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // =========================
-  // SNACKBAR
-  // =========================
-
-  void _showMessage(
-    BuildContext context,
-    String message,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
       ),
     );
   }

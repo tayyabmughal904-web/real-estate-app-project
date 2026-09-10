@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -10,17 +9,15 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
 
-    // Wait 3 seconds
+    // Wait 2.5 seconds before navigating to onboarding
     Timer(
-      const Duration(seconds: 3),
+      const Duration(milliseconds: 2500),
       () {
         if (!mounted) return;
-
         Navigator.pushReplacementNamed(
           context,
           '/onboarding1',
@@ -33,23 +30,44 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D8547),
-
       body: SafeArea(
         child: Column(
           children: [
-
-            // Status bar area
-            const SizedBox(height: 20),
-
             const Spacer(),
 
-            // App name
+            // Brand Icon & Title
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.apartment_rounded,
+                size: 54,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // App Name
             const Text(
-              'Luxeyline',
+              'Luxeylin',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Luxury Real Estate & Homes',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.5,
               ),
             ),
 
@@ -57,26 +75,25 @@ class _SplashScreenState extends State<SplashScreen> {
 
             // Version
             const Text(
-              'Version 156.2',
+              'Version 1.0.0',
               style: TextStyle(
-                color: Colors.white70,
-                fontSize: 8,
+                color: Colors.white60,
+                fontSize: 12,
+                letterSpacing: 0.5,
               ),
             ),
+            const SizedBox(height: 16),
 
-            const SizedBox(height: 10),
-
-            // Bottom indicator
+            // Bottom indicator line
             Container(
-              width: 70,
-              height: 3,
+              width: 80,
+              height: 4,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white30,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-
-            const SizedBox(height: 5),
+            const SizedBox(height: 12),
           ],
         ),
       ),
