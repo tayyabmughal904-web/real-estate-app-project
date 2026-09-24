@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/property_model.dart';
 import '../models/chat_model.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
+import '../models/agent_model.dart';
 import '../data/mock_data.dart';
+import '../services/api_response.dart';
+import '../services/auth_service.dart';
+import '../services/property_service.dart';
+import '../services/chat_service.dart';
+import '../services/notification_service.dart';
+import '../services/storage_service.dart';
 
 enum PropertySortOption {
   recommended('Recommended'),
@@ -28,10 +36,45 @@ class ScheduledTour {
     required this.timeSlot,
     required this.tourType,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'property': property.toJson(),
+      'date': date.toIso8601String(),
+      'timeSlot': timeSlot,
+      'tourType': tourType,
+    };
+  }
+
+  factory ScheduledTour.fromJson(Map<String, dynamic> json) {
+    return ScheduledTour(
+      id: json['id'] as String,
+      property: Property.fromJson(json['property'] as Map<String, dynamic>),
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+      timeSlot: json['timeSlot'] as String? ?? '11:00 AM',
+      tourType: json['tourType'] as String? ?? 'In-Person Tour',
+    );
+  }
 }
 
 class AppState extends ChangeNotifier {
-  // All properties
+  final AuthService _authService = AuthService();
+  final PropertyService _propertyService = PropertyService();
+  final ChatService _chatService = ChatService();
+  final NotificationService _notificationService = NotificationService();
+  final StorageService _storageService = StorageService();
+
+  // Authentication & Current User
+  UserModel? _currentUser;
+  UserModel? get currentUser => _currentUser ?? _authService.currentUser;
+  bool get isAuthenticated => _currentUser != null;
+  bool _isAuthLoading = false;
+  bool get isAuthLoading => _isAuthLoading;
+  String? _authError;
+  String? get authError => _authError;
+
+  // Properties
   List<Property> _properties = [];
   List<Property> get properties => _properties.isNotEmpty ? _properties : MockData.properties;
 
@@ -50,6 +93,92 @@ class AppState extends ChangeNotifier {
     } else {
       _favoriteIds.add(propertyId);
     }
+    _propertyService.toggleFavorite(propertyId);
+    _storageService.saveFavoriteIds(_favoriteIds);
+    notifyListeners();
+  }
+
+  void addProperty(Property property) {
+    _properties.insert(0, property);
+    _propertyService.addProperty(property);
+
+    // Save custom properties to persistent storage
+    final customList = _properties
+        .where((p) => p.agent.id == 'user_agent' || p.id.startsWith('user_prop_') || p.id.startsWith('prop_custom_') || p.agent.name == userName)
+        .toList();
+    _storageService.saveCustomProperties(customList);
+
+    // Add a notification for listing creation
+    final notif = AppNotification(
+      id: 'notif_listing_${DateTime.now().millisecondsSinceEpoch}',
+      title: 'Property Listed for Sale 🏡',
+      message: 'Your listing "${property.title}" is now live on Luxeylin.',
+      timestamp: DateTime.now(),
+      type: NotificationType.system,
+      propertyId: property.id,
+    );
+    _notifications.insert(0, notif);
+    _notificationService.addNotification(notif);
+
+    notifyListeners();
+  }
+
+  // Seller Management ("My Listings")
+  List<Property> get myListings => _properties
+      .where((p) => p.agent.id == 'user_agent' || p.id.startsWith('user_prop_') || p.id.startsWith('prop_custom_') || p.agent.name == userName)
+      .toList();
+
+  void updatePropertyPrice(String propertyId, double newPrice) {
+    final idx = _properties.indexWhere((p) => p.id == propertyId);
+    if (idx != -1) {
+      _properties[idx] = _properties[idx].copyWith(price: newPrice);
+      _storageService.saveCustomProperties(myListings);
+      notifyListeners();
+    }
+  }
+
+  void updatePropertyStatus(String propertyId, String newStatus) {
+    final idx = _properties.indexWhere((p) => p.id == propertyId);
+    if (idx != -1) {
+      _properties[idx] = _properties[idx].copyWith(status: newStatus);
+      _storageService.saveCustomProperties(myListings);
+      notifyListeners();
+    }
+  }
+
+  void deleteProperty(String propertyId) {
+    _properties.removeWhere((p) => p.id == propertyId);
+    _favoriteIds.remove(propertyId);
+    _storageService.saveCustomProperties(myListings);
+    _storageService.saveFavoriteIds(_favoriteIds);
+    notifyListeners();
+  }
+
+  // Property Comparison List
+  List<String> _compareIds = [];
+  List<String> get compareIds => _compareIds;
+
+  List<Property> get compareProperties =>
+      properties.where((p) => _compareIds.contains(p.id)).toList();
+
+  bool isInCompare(String id) => _compareIds.contains(id);
+
+  void toggleCompare(String id) {
+    if (_compareIds.contains(id)) {
+      _compareIds.remove(id);
+    } else {
+      if (_compareIds.length >= 3) {
+        _compareIds.removeAt(0);
+      }
+      _compareIds.add(id);
+    }
+    _storageService.saveCompareIds(_compareIds);
+    notifyListeners();
+  }
+
+  void clearCompare() {
+    _compareIds.clear();
+    _storageService.saveCompareIds(_compareIds);
     notifyListeners();
   }
 
@@ -81,17 +210,20 @@ class AppState extends ChangeNotifier {
 
   // Chats
   List<ChatConversation> _conversations = [];
-  List<ChatConversation> get conversations => _conversations.isNotEmpty ? _conversations : MockData.initialConversations;
+  List<ChatConversation> get conversations =>
+      _conversations.isNotEmpty ? _conversations : _chatService.currentConversations;
 
   // Notifications
   List<AppNotification> _notifications = [];
-  List<AppNotification> get notifications => _notifications.isNotEmpty ? _notifications : MockData.initialNotifications;
+  List<AppNotification> get notifications =>
+      _notifications.isNotEmpty ? _notifications : _notificationService.currentNotifications;
 
-  // User Profile & Location
+  // User Profile & Preferences
   String userName = 'Alexander Wright';
   String userEmail = 'alex.wright@luxeylin.com';
   String userPhone = '+1 (555) 887-3210';
   String userLocation = 'Los Angeles, CA';
+  String? userAvatarUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
   bool notificationsEnabled = true;
   bool isDarkMode = false;
 
@@ -121,7 +253,223 @@ class AppState extends ChangeNotifier {
     ];
     _conversations = List<ChatConversation>.from(MockData.initialConversations);
     _notifications = List<AppNotification>.from(MockData.initialNotifications);
+
+    // Initial default user
+    _currentUser = UserModel(
+      id: 'alex_wright_01',
+      name: userName,
+      email: userEmail,
+      phone: userPhone,
+      location: userLocation,
+      avatarUrl: userAvatarUrl,
+      authProvider: 'email',
+      createdAt: DateTime.now(),
+    );
+
+    // Asynchronously load persistent storage
+    _loadFromStorage();
   }
+
+  Future<void> _loadFromStorage() async {
+    try {
+      await _storageService.init();
+
+      // Load favorites
+      final savedFavs = _storageService.getFavoriteIds();
+      if (savedFavs.isNotEmpty) {
+        _favoriteIds = savedFavs;
+      }
+
+      // Load custom properties
+      final customProps = _storageService.getCustomProperties();
+      for (final p in customProps) {
+        if (!_properties.any((existing) => existing.id == p.id)) {
+          _properties.insert(0, p);
+        }
+      }
+
+      // Load tours
+      final savedTourData = _storageService.getScheduledTours();
+      if (savedTourData.isNotEmpty) {
+        _scheduledTours = savedTourData.map((t) => ScheduledTour.fromJson(t)).toList();
+      }
+
+      // Load compare IDs
+      _compareIds = _storageService.getCompareIds();
+
+      // Load profile
+      final savedUser = _storageService.getUserProfile();
+      if (savedUser != null) {
+        _applyAuthenticatedUser(savedUser);
+      }
+
+      // Load dark mode
+      final savedDark = _storageService.getDarkMode();
+      if (savedDark != null) {
+        isDarkMode = savedDark;
+      }
+
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  // =============================================================
+  // AUTHENTICATION APIs
+  // =============================================================
+
+  Future<ApiResponse<UserModel>> signInWithEmail(String email, String password) async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.signInWithEmail(email: email, password: password);
+    _isAuthLoading = false;
+
+    if (response.success && response.data != null) {
+      _applyAuthenticatedUser(response.data!);
+    } else {
+      _authError = response.error;
+    }
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<UserModel>> signInWithGoogle({GoogleAccountOption? selectedAccount}) async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.signInWithGoogle(selectedAccount: selectedAccount);
+    _isAuthLoading = false;
+
+    if (response.success && response.data != null) {
+      _applyAuthenticatedUser(response.data!);
+    } else {
+      _authError = response.error;
+    }
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<UserModel>> signInWithApple() async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.signInWithApple();
+    _isAuthLoading = false;
+
+    if (response.success && response.data != null) {
+      _applyAuthenticatedUser(response.data!);
+    } else {
+      _authError = response.error;
+    }
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<UserModel>> signInAsGuest() async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.signInAsGuest();
+    _isAuthLoading = false;
+
+    if (response.success && response.data != null) {
+      _applyAuthenticatedUser(response.data!);
+    } else {
+      _authError = response.error;
+    }
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<UserModel>> signUp({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+  }) async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.signUp(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone,
+    );
+    _isAuthLoading = false;
+
+    if (response.success && response.data != null) {
+      _applyAuthenticatedUser(response.data!);
+    } else {
+      _authError = response.error;
+    }
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<bool>> sendPasswordResetEmail(String email) async {
+    _isAuthLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    final response = await _authService.sendPasswordResetEmail(email);
+    _isAuthLoading = false;
+    _authError = response.error;
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<bool>> verifyResetCode(String email, String code) async {
+    _isAuthLoading = true;
+    notifyListeners();
+
+    final response = await _authService.verifyResetCode(email, code);
+    _isAuthLoading = false;
+    notifyListeners();
+    return response;
+  }
+
+  Future<ApiResponse<bool>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    _isAuthLoading = true;
+    notifyListeners();
+
+    final response = await _authService.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+    _isAuthLoading = false;
+    notifyListeners();
+    return response;
+  }
+
+  Future<void> signOut() async {
+    await _authService.signOut();
+    _currentUser = null;
+    notifyListeners();
+  }
+
+  void _applyAuthenticatedUser(UserModel user) {
+    _currentUser = user;
+    userName = user.name;
+    userEmail = user.email;
+    if (user.phone != null) userPhone = user.phone!;
+    if (user.location != null) userLocation = user.location!;
+    userAvatarUrl = user.avatarUrl;
+  }
+
+  // =============================================================
+  // SEARCH & FILTER METHODS
+  // =============================================================
 
   void setSearchQuery(String query) {
     _searchQuery = query;
@@ -172,7 +520,6 @@ class AppState extends ChangeNotifier {
   List<Property> get filteredProperties {
     final list = properties;
     var result = list.where((prop) {
-      // Query filter
       if (_searchQuery.trim().isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchesTitle = prop.title.toLowerCase().contains(q);
@@ -184,27 +531,22 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      // Property type filter
       if (_selectedTypeFilter != null && prop.type != _selectedTypeFilter) {
         return false;
       }
 
-      // Rent/Sale filter
       if (_filterForRent != null && prop.isForRent != _filterForRent) {
         return false;
       }
 
-      // Price filter
       if (prop.price < _priceRange.start || prop.price > _priceRange.end) {
         return false;
       }
 
-      // Bedrooms filter
       if (_minBedrooms > 0 && prop.bedrooms < _minBedrooms) {
         return false;
       }
 
-      // Bathrooms filter
       if (_minBathrooms > 0 && prop.bathrooms < _minBathrooms) {
         return false;
       }
@@ -212,7 +554,6 @@ class AppState extends ChangeNotifier {
       return true;
     }).toList();
 
-    // Sort order
     switch (_sortOption) {
       case PropertySortOption.priceLowToHigh:
         result.sort((a, b) => a.price.compareTo(b.price));
@@ -224,113 +565,80 @@ class AppState extends ChangeNotifier {
         result.sort((a, b) => b.rating.compareTo(a.rating));
         break;
       case PropertySortOption.recommended:
-      default:
         break;
     }
 
     return result;
   }
 
-  // -------------------------------------------------------------
+  // =============================================================
   // SCHEDULED TOURS
-  // -------------------------------------------------------------
+  // =============================================================
+
   void addScheduledTour({
     required Property property,
     required DateTime date,
     required String timeSlot,
     required String tourType,
   }) {
-    _scheduledTours.add(
-      ScheduledTour(
-        id: 'tour_${DateTime.now().millisecondsSinceEpoch}',
-        property: property,
-        date: date,
-        timeSlot: timeSlot,
-        tourType: tourType,
-      ),
+    final newTour = ScheduledTour(
+      id: 'tour_${DateTime.now().millisecondsSinceEpoch}',
+      property: property,
+      date: date,
+      timeSlot: timeSlot,
+      tourType: tourType,
     );
+    _scheduledTours.add(newTour);
 
-    // Add a notification for this booking
-    _notifications.insert(
-      0,
-      AppNotification(
-        id: 'notif_tour_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Tour Booked ✨',
-        message: 'Your $tourType for ${property.title} is scheduled for ${date.day}/${date.month} at $timeSlot.',
-        timestamp: DateTime.now(),
-        type: NotificationType.tour,
-        propertyId: property.id,
-      ),
+    final notif = AppNotification(
+      id: 'notif_tour_${DateTime.now().millisecondsSinceEpoch}',
+      title: 'Tour Booked ✨',
+      message: 'Your $tourType for ${property.title} is scheduled for ${date.day}/${date.month} at $timeSlot.',
+      timestamp: DateTime.now(),
+      type: NotificationType.tour,
+      propertyId: property.id,
     );
+    _notifications.insert(0, notif);
+    _notificationService.addNotification(notif);
+    _storageService.saveScheduledTours(_scheduledTours.map((t) => t.toJson()).toList());
 
     notifyListeners();
   }
 
   void cancelTour(String tourId) {
     _scheduledTours.removeWhere((t) => t.id == tourId);
+    _storageService.saveScheduledTours(_scheduledTours.map((t) => t.toJson()).toList());
     notifyListeners();
   }
 
-  // -------------------------------------------------------------
+  // =============================================================
   // CHATS
-  // -------------------------------------------------------------
+  // =============================================================
+
   int get totalUnreadMessages =>
       conversations.fold(0, (sum, conv) => sum + conv.unreadCount);
 
   ChatConversation getOrCreateConversationForProperty(Property property) {
-    final convList = conversations;
-    final existingIndex = convList.indexWhere(
-      (c) => c.agentId == property.agent.id,
-    );
-
-    if (existingIndex != -1) {
-      return convList[existingIndex];
-    }
-
-    final newConv = ChatConversation(
-      id: 'chat_${DateTime.now().millisecondsSinceEpoch}',
-      agentId: property.agent.id,
-      agentName: property.agent.name,
-      agentAvatar: property.agent.avatarUrl,
-      propertyTitle: property.title,
-      propertyThumbnail: property.images.isNotEmpty ? property.images.first : '',
-      unreadCount: 0,
-      messages: [
-        MessageItem(
-          id: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
-          senderId: property.agent.id,
-          text: 'Hi! I am ${property.agent.name}. How can I assist you with ${property.title}?',
-          timestamp: DateTime.now(),
-          isFromMe: false,
-        ),
-      ],
-    );
-    _conversations.insert(0, newConv);
+    final conv = _chatService.getOrCreateConversationForProperty(property);
+    _conversations = List<ChatConversation>.from(_chatService.currentConversations);
     notifyListeners();
-    return newConv;
+    return conv;
+  }
+
+  ChatConversation getOrCreateConversationForAgent(Agent agent) {
+    final conv = _chatService.getOrCreateConversationForAgent(agent);
+    _conversations = List<ChatConversation>.from(_chatService.currentConversations);
+    notifyListeners();
+    return conv;
   }
 
   void sendMessage(String conversationId, String text) {
-    final index = _conversations.indexWhere((c) => c.id == conversationId);
-    if (index == -1) return;
-
-    final conv = _conversations[index];
-    final updatedMessages = List<MessageItem>.from(conv.messages)
-      ..add(
-        MessageItem(
-          id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-          senderId: 'user',
-          text: text,
-          timestamp: DateTime.now(),
-          isFromMe: true,
-        ),
-      );
-
-    _conversations[index] = conv.copyWith(messages: updatedMessages);
+    _chatService.sendMessage(conversationId, text);
+    _conversations = List<ChatConversation>.from(_chatService.currentConversations);
     notifyListeners();
 
-    // Trigger simulated agent response after 1.5 seconds
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // Auto agent reply
+    Future.delayed(const Duration(milliseconds: 1200), () {
       final replyIndex = _conversations.indexWhere((c) => c.id == conversationId);
       if (replyIndex == -1) return;
 
@@ -359,46 +667,45 @@ class AppState extends ChangeNotifier {
   }
 
   void markConversationAsRead(String conversationId) {
-    final index = _conversations.indexWhere((c) => c.id == conversationId);
-    if (index != -1 && _conversations[index].unreadCount > 0) {
-      _conversations[index] = _conversations[index].copyWith(unreadCount: 0);
-      notifyListeners();
-    }
+    _chatService.markAsRead(conversationId);
+    _conversations = List<ChatConversation>.from(_chatService.currentConversations);
+    notifyListeners();
   }
 
-  // -------------------------------------------------------------
+  // =============================================================
   // NOTIFICATIONS
-  // -------------------------------------------------------------
+  // =============================================================
+
   int get unreadNotificationsCount =>
       notifications.where((n) => !n.isRead).length;
 
   void markNotificationAsRead(String notificationId) {
-    final index = _notifications.indexWhere((n) => n.id == notificationId);
-    if (index != -1 && !_notifications[index].isRead) {
-      _notifications[index] = _notifications[index].copyWith(isRead: true);
-      notifyListeners();
-    }
+    _notificationService.markAsRead(notificationId);
+    _notifications = List<AppNotification>.from(_notificationService.currentNotifications);
+    notifyListeners();
   }
 
   void markAllNotificationsAsRead() {
-    for (int i = 0; i < _notifications.length; i++) {
-      if (!_notifications[i].isRead) {
-        _notifications[i] = _notifications[i].copyWith(isRead: true);
-      }
-    }
+    _notificationService.markAllAsRead();
+    _notifications = List<AppNotification>.from(_notificationService.currentNotifications);
     notifyListeners();
   }
 
   void clearNotifications() {
+    _notificationService.clearAll();
     _notifications.clear();
     notifyListeners();
   }
 
-  // -------------------------------------------------------------
-  // USER PROFILE & LOCATION
-  // -------------------------------------------------------------
+  // =============================================================
+  // USER PROFILE & PREFERENCES
+  // =============================================================
+
   void setLocation(String newLocation) {
     userLocation = newLocation;
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(location: newLocation);
+    }
     notifyListeners();
   }
 
@@ -407,11 +714,24 @@ class AppState extends ChangeNotifier {
     String? email,
     String? phone,
     String? location,
+    String? avatarUrl,
   }) {
     if (name != null && name.isNotEmpty) userName = name;
     if (email != null && email.isNotEmpty) userEmail = email;
     if (phone != null && phone.isNotEmpty) userPhone = phone;
     if (location != null && location.isNotEmpty) userLocation = location;
+    if (avatarUrl != null) userAvatarUrl = avatarUrl;
+
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(
+        name: name,
+        email: email,
+        phone: phone,
+        location: location,
+        avatarUrl: avatarUrl,
+      );
+      _storageService.saveUserProfile(_currentUser!);
+    }
     notifyListeners();
   }
 
@@ -422,11 +742,12 @@ class AppState extends ChangeNotifier {
 
   void toggleTheme(bool val) {
     isDarkMode = val;
+    _storageService.saveDarkMode(val);
     notifyListeners();
   }
 }
 
-// InheritedNotifier Provider for direct and reactive access
+// InheritedNotifier Provider
 class AppStateScope extends InheritedNotifier<AppState> {
   const AppStateScope({
     super.key,

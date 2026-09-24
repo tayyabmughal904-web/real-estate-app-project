@@ -130,6 +130,8 @@ class MockData {
       isFeatured: true,
       isForRent: true,
       agent: agent1,
+      latitude: 34.0736,
+      longitude: -118.4004,
     ),
     Property(
       id: 'prop_2',
@@ -173,6 +175,8 @@ class MockData {
       isFeatured: true,
       isForRent: true,
       agent: agent3,
+      latitude: 40.7580,
+      longitude: -73.9855,
     ),
     Property(
       id: 'prop_3',
@@ -215,6 +219,8 @@ class MockData {
       isFeatured: true,
       isForRent: false,
       agent: agent2,
+      latitude: 47.6062,
+      longitude: -122.3321,
     ),
     Property(
       id: 'prop_4',
@@ -256,6 +262,8 @@ class MockData {
       isFeatured: false,
       isForRent: true,
       agent: agent1,
+      latitude: 25.7617,
+      longitude: -80.1918,
     ),
     Property(
       id: 'prop_5',
@@ -298,6 +306,8 @@ class MockData {
       isFeatured: true,
       isForRent: false,
       agent: agent3,
+      latitude: 34.0259,
+      longitude: -118.7798,
     ),
     Property(
       id: 'prop_6',
@@ -337,6 +347,8 @@ class MockData {
       isFeatured: false,
       isForRent: true,
       agent: agent2,
+      latitude: 37.7749,
+      longitude: -122.4194,
     ),
   ];
 

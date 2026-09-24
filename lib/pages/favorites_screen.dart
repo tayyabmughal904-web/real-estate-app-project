@@ -3,6 +3,7 @@ import '../models/property_model.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'property_detail_screen.dart';
+import 'explore_screen.dart';
 
 class FavoritesScreen extends StatelessWidget {
   final VoidCallback? onExploreTap;
@@ -91,10 +92,12 @@ class FavoritesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: onExploreTap ??
-                  () {
-                    Navigator.pushNamed(context, '/home');
-                  },
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (ctx) => const ExploreScreen()),
+                );
+              },
               child: const Text('Explore Properties'),
             ),
           ],

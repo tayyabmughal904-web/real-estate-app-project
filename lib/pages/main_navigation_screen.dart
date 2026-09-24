@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
-import 'explore_screen.dart';
+import 'sell_house_screen.dart';
 import 'favorites_screen.dart';
 import 'messages_screen.dart';
 import 'profile_screen.dart';
@@ -39,8 +39,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final pages = [
       HomeScreen(onNavigateTab: _onTabTapped),
-      const ExploreScreen(),
-      FavoritesScreen(onExploreTap: () => _onTabTapped(1)),
+      SellHouseScreen(onPublished: (prop) => _onTabTapped(0)),
+      FavoritesScreen(onExploreTap: () => _onTabTapped(0)),
       const MessagesScreen(),
       const ProfileScreen(),
     ];
@@ -75,9 +75,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
                 _buildNavItem(
                   index: 1,
-                  icon: Icons.explore_outlined,
-                  selectedIcon: Icons.explore_rounded,
-                  label: 'Explore',
+                  icon: Icons.add_home_work_outlined,
+                  selectedIcon: Icons.add_home_work_rounded,
+                  label: 'Sell',
+                  isProminent: true,
                 ),
                 _buildNavItem(
                   index: 2,
@@ -113,8 +114,43 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     required IconData selectedIcon,
     required String label,
     int? badgeCount,
+    bool isProminent = false,
   }) {
     final isSelected = _currentIndex == index;
+
+    if (isProminent) {
+      return GestureDetector(
+        onTap: () => _onTabTapped(index),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.primaryLight,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected ? selectedIcon : icon,
+                size: 22,
+                color: isSelected ? Colors.white : AppTheme.primaryColor,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: () => _onTabTapped(index),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'theme/app_theme.dart';
 import 'state/app_state.dart';
+import 'models/property_model.dart';
+import 'models/chat_model.dart';
 
 import 'pages/splash_screen.dart';
 import 'pages/onboarding_screen1.dart';
@@ -12,6 +14,9 @@ import 'pages/auth/email_login_screen.dart';
 import 'pages/auth/signup_screen.dart';
 import 'pages/auth/forgot_password_screen.dart';
 import 'pages/main_navigation_screen.dart';
+import 'pages/explore_screen.dart';
+import 'pages/property_detail_screen.dart';
+import 'pages/chat_detail_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +51,30 @@ class LuxeylinApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/home': (context) => const MainNavigationScreen(initialIndex: 0),
-        '/explore': (context) => const MainNavigationScreen(initialIndex: 1),
+        '/sell': (context) => const MainNavigationScreen(initialIndex: 1),
+        '/explore': (context) => const ExploreScreen(),
         '/saved': (context) => const MainNavigationScreen(initialIndex: 2),
         '/messages': (context) => const MainNavigationScreen(initialIndex: 3),
         '/profile': (context) => const MainNavigationScreen(initialIndex: 4),
+      },
+
+      onGenerateRoute: (settings) {
+        if (settings.name == '/property-detail') {
+          final prop = settings.arguments as Property?;
+          if (prop != null) {
+            return MaterialPageRoute(
+              builder: (context) => PropertyDetailScreen(property: prop),
+            );
+          }
+        } else if (settings.name == '/chat-detail') {
+          final conv = settings.arguments as ChatConversation?;
+          if (conv != null) {
+            return MaterialPageRoute(
+              builder: (context) => ChatDetailScreen(conversation: conv),
+            );
+          }
+        }
+        return null;
       },
     );
   }

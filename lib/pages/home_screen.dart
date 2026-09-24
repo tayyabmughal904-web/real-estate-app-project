@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/property_model.dart';
+import '../data/mock_data.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'property_detail_screen.dart';
+import 'chat_detail_screen.dart';
 import 'notifications_sheet.dart';
+import 'explore_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int)? onNavigateTab;
@@ -193,7 +196,10 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: GestureDetector(
                   onTap: () {
-                    if (onNavigateTab != null) onNavigateTab!(1);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (ctx) => const ExploreScreen()),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -263,7 +269,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                        if (onNavigateTab != null) onNavigateTab!(1);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const ExploreScreen()),
+                        );
                       },
                       child: const Text(
                         'See all',
@@ -387,6 +396,45 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               // =========================
+              // TOP AGENTS
+              // =========================
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Top Premier Agents',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        if (onNavigateTab != null) onNavigateTab!(3);
+                      },
+                      child: const Text(
+                        'All Chats',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildTopAgentsList(context, appState),
+
+              const SizedBox(height: 28),
+
+              // =========================
               // RECOMMENDED FOR YOU
               // =========================
               Padding(
@@ -404,7 +452,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                     GestureDetector(
                       onTap: () {
-                        if (onNavigateTab != null) onNavigateTab!(1);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const ExploreScreen()),
+                        );
                       },
                       child: const Text(
                         'View more',
@@ -463,7 +514,15 @@ class HomeScreen extends StatelessWidget {
           final isSelected = appState.selectedTypeFilter == type;
 
           return GestureDetector(
-            onTap: () => appState.setTypeFilter(type),
+            onTap: () {
+              appState.setTypeFilter(type);
+              if (type != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (ctx) => const ExploreScreen()),
+                );
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -483,6 +542,99 @@ class HomeScreen extends StatelessWidget {
                     color: isSelected ? Colors.white : AppTheme.textPrimary,
                   ),
                 ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTopAgentsList(BuildContext context, AppState appState) {
+    final agents = [MockData.agent1, MockData.agent2, MockData.agent3];
+
+    return SizedBox(
+      height: 100,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: agents.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, idx) {
+          final agent = agents[idx];
+          return GestureDetector(
+            onTap: () {
+              final conv = appState.getOrCreateConversationForAgent(agent);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (ctx) => ChatDetailScreen(conversation: conv),
+                ),
+              );
+            },
+            child: Container(
+              width: 220,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.borderLight),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundImage: NetworkImage(agent.avatarUrl),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          agent.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          agent.agency,
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: AppTheme.accentColor, size: 14),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${agent.rating}',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLight,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Chat',
+                                style: TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           );

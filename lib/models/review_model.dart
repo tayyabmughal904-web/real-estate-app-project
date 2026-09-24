@@ -14,4 +14,26 @@ class PropertyReview {
     required this.date,
     required this.comment,
   });
+
+  factory PropertyReview.fromJson(Map<String, dynamic> json) {
+    return PropertyReview(
+      id: json['id'] as String,
+      userName: json['userName'] as String,
+      userAvatar: json['userAvatar'] as String? ?? '',
+      rating: (json['rating'] as num?)?.toDouble() ?? 5.0,
+      date: json['date'] as String? ?? 'Recently',
+      comment: json['comment'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'rating': rating,
+      'date': date,
+      'comment': comment,
+    };
+  }
 }
